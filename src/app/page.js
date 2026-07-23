@@ -20,6 +20,7 @@ import {
 
 export default function Page() {
   const [apiKey, setApiKey] = useState('');
+  const [sheetSyncUrl, setSheetSyncUrl] = useState('');
   const [selectedModel, setSelectedModel] = useState('gemini-3.6-flash');
   const [files, setFiles] = useState([]);
   const [loading, setLoading] = useState(false);
@@ -28,20 +29,24 @@ export default function Page() {
   const [navTarget, setNavTarget] = useState('cross'); 
   const [dragActive, setDragActive] = useState(false);
   const [error, setError] = useState('');
+  const [syncingSheets, setSyncingSheets] = useState(false);
+  const [syncStatus, setSyncStatus] = useState('');
 
   // Hydration-safe localStorage load
   useEffect(() => {
     if (typeof window !== 'undefined') {
       setApiKey(localStorage.getItem('edoofa_gemini_key') || '');
+      setSheetSyncUrl(localStorage.getItem('edoofa_sheet_sync_url') || '');
     }
   }, []);
 
   // Save API key to localStorage when updated
   useEffect(() => {
-    if (typeof window !== 'undefined' && apiKey) {
-      localStorage.setItem('edoofa_gemini_key', apiKey);
+    if (typeof window !== 'undefined') {
+      if (apiKey) localStorage.setItem('edoofa_gemini_key', apiKey);
+      if (sheetSyncUrl) localStorage.setItem('edoofa_sheet_sync_url', sheetSyncUrl);
     }
-  }, [apiKey]);
+  }, [apiKey, sheetSyncUrl]);
 
   const handleDrag = (e) => {
     e.preventDefault();
@@ -127,11 +132,46 @@ export default function Page() {
       } else {
         setNavTarget(0); // Go to first student
       }
+
+      // Auto-sync to Google Sheet if URL is configured
+      if (sheetSyncUrl) {
+        syncToGoogleSheets(result);
+      }
     } catch (err) {
       console.error(err);
       setError(err.message || 'An error occurred during auditing.');
     } finally {
       setLoading(false);
+    }
+  };
+
+  const syncToGoogleSheets = async (dataToSync = auditData) => {
+    if (!sheetSyncUrl) {
+      setError('Please configure a Google Sheets Apps Script Web App URL first.');
+      return;
+    }
+    if (!dataToSync) return;
+
+    setSyncingSheets(true);
+    setSyncStatus('Syncing findings to Google Sheet...');
+    
+    try {
+      await fetch(sheetSyncUrl, {
+        method: 'POST',
+        mode: 'no-cors',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(dataToSync)
+      });
+      setSyncStatus('Successfully synced to Google Sheets!');
+      setTimeout(() => setSyncStatus(''), 4000);
+    } catch (err) {
+      console.error(err);
+      setSyncStatus('Sync failed. Please verify your Apps Script URL.');
+      setTimeout(() => setSyncStatus(''), 5000);
+    } finally {
+      setSyncingSheets(false);
     }
   };
 
@@ -209,6 +249,20 @@ export default function Page() {
               onChange={(e) => setApiKey(e.target.value)}
             />
             <div className={`api-status-dot ${apiKey ? 'active' : ''}`} title={apiKey ? 'API Key Loaded' : 'No API Key'} />
+          </div>
+
+          {/* Sheets Sync Input */}
+          <div className="api-config-bar">
+            <FileText size={16} className="text-textSecondary" />
+            <input 
+              type="text" 
+              placeholder="Google Sheets Sync URL (Apps Script)..." 
+              value={sheetSyncUrl} 
+              onChange={(e) => setSheetSyncUrl(e.target.value)}
+              className="text-xs"
+              style={{ width: '220px' }}
+            />
+            <div className={`api-status-dot ${sheetSyncUrl ? 'active' : ''}`} title={sheetSyncUrl ? 'Sheets Sync Configured' : 'No Sheets Sync URL'} />
           </div>
         </div>
       </header>
@@ -340,6 +394,21 @@ export default function Page() {
             </div>
 
             <div className="mt-auto pt-6 border-t border-white/5 flex flex-col gap-3">
+              {sheetSyncUrl && (
+                <button 
+                  className="btn flex items-center justify-center gap-2 btn-primary" 
+                  disabled={syncingSheets}
+                  onClick={() => syncToGoogleSheets()}
+                >
+                  <FileText size={16} />
+                  {syncingSheets ? 'Syncing...' : 'Sync to Google Sheets'}
+                </button>
+              )}
+              {syncStatus && (
+                <div className="text-[11px] text-center text-accentNeon font-medium px-2 py-1 bg-accentNeon/5 border border-accentNeon/20 rounded-lg animate-pulse">
+                  {syncStatus}
+                </div>
+              )}
               <button className="btn flex items-center justify-center gap-2" style={{ background: 'rgba(255,255,255,0.06)', color: 'white' }} onClick={exportJSON}>
                 <FileJson size={16} />
                 Export Audit Data
