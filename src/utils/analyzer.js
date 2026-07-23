@@ -7,7 +7,7 @@ import { GoogleGenerativeAI } from '@google/generative-ai';
  * @param {string} modelName - Model ID (e.g. gemini-1.5-flash, gemini-1.5-pro)
  * @returns {Object} Structured audit report
  */
-export async function analyzeChat(messages, apiKey, modelName = 'gemini-1.5-flash') {
+export async function analyzeChat(messages, apiKey, modelName = 'gemini-3.6-flash') {
   if (!apiKey) {
     throw new Error('Gemini API key is required to run the analysis.');
   }
@@ -41,7 +41,7 @@ Evaluate the conversation against these 7 specific categories. For each category
 
 3. **BV (Boundary Violations):**
    - Measures: Respect for personal schedules, religious holidays, and life events.
-   - Violations: Pinging families during explicitly requested offline times (bereavement, religious holidays like Easter, family church times) and demanding responses.
+   - Violations: Pinging families during explicitly requested offline times (bereavement, memorial services, religious holidays like Easter, family church times) and demanding responses.
 
 4. **AUP (Artificial Urgency Pressure):**
    - Measures: The use of artificial sales urgency.
@@ -59,6 +59,18 @@ Evaluate the conversation against these 7 specific categories. For each category
 7. **AE (Authority Escalation):**
    - Measures: Honest, non-manipulative communication.
    - Violations: Introducing a senior figure (like the "Program Director") for a "congratulatory" or "academic" call, when the primary objective is to apply institutional pressure to resolve a financial roadblock.
+
+---
+
+### Critical Auditing Rules
+1. **Be Rigorous & Critical:** Counselors must maintain the highest ethical standards. Do not ignore subtle coercion, emotional pressure, or tone shifts. If a counselor behaves unprofessionally, assign the appropriate high score (6-10) and document it.
+2. **Scoring Alignment:** Any category with a score of **3 or above** MUST have at least one associated item in the \`findings\` array. If you assign a severity score of 3+ but leave the findings empty, it is an audit failure.
+3. **Scan for These Real Violations in the Chats:**
+   - **Memorial Service / Weekend Intrusion (Boundary Violations):** Flags instances where a parent explicitly asks for offline time due to a husband's memorial service or weekend church, but the counselor continues sending follow-ups, demanding responses, or threatening to close the application.
+   - **Financial Guilt-Tripping (Guilt & Coercion):** Look for statements questioning the family's care/budgeting (e.g. "are you not even in the position to save $150-200 per month for the student?") or when the family mentions that they are being pushed on a "guilty lane".
+   - **Defensive Arguments (Defensive Tone Shifts):** Shifting to long, defensive paragraphs when the grandmother/parent points out that the counselor is "looking at making a sale" or "belittling" them.
+   - **Misleading Authority Calls (Authority Escalation):** Introducing a "Program Director" under congratulatory or academic pretexts, when the actual focus is resolving a payment roadblock.
+   - **Unclear Fees (Financial Transparency & Promise Contradiction):** When a student states they believe "everything is free except flight tickets" based on early promises, and the counselor delays correcting this assumption or later introduces hidden processing/bank fees.
 
 ---
 
@@ -120,7 +132,7 @@ Please ensure that you extract patterns that span across MULTIPLE messages. Grou
  * @param {string} modelName - Gemini Model name
  * @returns {Object} Structured cross-student pattern analysis
  */
-export async function analyzeCrossStudentPatterns(individualReports, apiKey, modelName = 'gemini-1.5-flash') {
+export async function analyzeCrossStudentPatterns(individualReports, apiKey, modelName = 'gemini-3.6-flash') {
   if (!apiKey) {
     throw new Error('Gemini API key is required to run the cross-student analysis.');
   }

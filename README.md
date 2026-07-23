@@ -98,8 +98,11 @@ audit_tool/
 ## 🚀 Local Setup & Installation
 
 ### Prerequisites
-* Node.js (version 18.x or above recommended)
-* npm or yarn
+* **Node.js**: Version 18.x or above (required due to modern ECMAScript features like nullish coalescing `??` and optional chaining `?.` used by Next.js and Turbopack).
+* **npm** or **yarn**
+
+> [!WARNING]
+> **Build Troubleshooting:** If you run `npm run build` or `npm run dev` and encounter a `SyntaxError: Unexpected token '?'` error from files inside `.next/build/chunks/...`, this means your shell is using an outdated global Node version (e.g. Node 12). Please upgrade Node.js to v18+ or ensure the newer Node path is prepended to your shell's `PATH` variable.
 
 ### Installation Steps
 

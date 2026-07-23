@@ -7,7 +7,7 @@ export async function POST(request) {
     const formData = await request.formData();
     const files = formData.getAll('chats');
     const apiKey = request.headers.get('x-api-key') || formData.get('apiKey') || process.env.GEMINI_API_KEY;
-    const model = request.headers.get('x-model') || formData.get('model') || 'gemini-1.5-flash';
+    const model = request.headers.get('x-model') || formData.get('model') || 'gemini-3.6-flash';
 
     if (!apiKey) {
       return NextResponse.json(

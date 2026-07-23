@@ -20,7 +20,7 @@ import {
 
 export default function Page() {
   const [apiKey, setApiKey] = useState('');
-  const [selectedModel, setSelectedModel] = useState('gemini-1.5-flash');
+  const [selectedModel, setSelectedModel] = useState('gemini-3.6-flash');
   const [files, setFiles] = useState([]);
   const [loading, setLoading] = useState(false);
   const [auditData, setAuditData] = useState(null);
@@ -191,10 +191,11 @@ export default function Page() {
               value={selectedModel}
               onChange={(e) => setSelectedModel(e.target.value)}
             >
+              <option value="gemini-3.6-flash" className="bg-bgSecondary">gemini-3.6-flash</option>
+              <option value="gemini-3.5-flash-lite" className="bg-bgSecondary">gemini-3.5-flash-lite</option>
+              <option value="gemini-3.1-pro" className="bg-bgSecondary">gemini-3.1-pro</option>
               <option value="gemini-1.5-flash" className="bg-bgSecondary">gemini-1.5-flash</option>
               <option value="gemini-1.5-pro" className="bg-bgSecondary">gemini-1.5-pro</option>
-              <option value="gemini-2.0-flash" className="bg-bgSecondary">gemini-2.0-flash</option>
-              <option value="gemini-2.5-flash" className="bg-bgSecondary">gemini-2.5-flash</option>
             </select>
           </div>
 
@@ -311,17 +312,21 @@ export default function Page() {
               )}
 
               {auditData.individualReports.map((report, idx) => {
-                let maxScore = 1;
-                if (report.metrics) {
-                  maxScore = Math.max(...Object.values(report.metrics).map(m => m.score || 1));
+                let riskClass = 'low';
+                let riskLabel = 'Low Risk';
+                if (report.error) {
+                  riskClass = 'critical';
+                  riskLabel = 'Error';
+                } else if (report.metrics) {
+                  const maxScore = Math.max(...Object.values(report.metrics).map(m => m.score || 1));
+                  riskClass = getSeverityClass(maxScore);
+                  riskLabel = getRiskLabel(maxScore);
                 }
-                const riskClass = getSeverityClass(maxScore);
-                const riskLabel = getRiskLabel(maxScore);
 
                 return (
                   <button 
                     key={idx} 
-                    className={`student-btn ${navTarget === idx ? 'active' : ''}`}
+                    className={`student-btn ${navTarget === idx ? 'active' : ''} ${report.error ? 'border-l-4 border-critical' : ''}`}
                     onClick={() => {
                       setNavTarget(idx);
                       setActiveTab('summary');
@@ -410,18 +415,33 @@ export default function Page() {
             {/* View B: Individual Student Analysis */}
             {activeStudentReport && (
               <>
-                {/* Header Summary */}
-                <div className="cross-student-banner bg-white/5 border border-white/5">
-                  <div className="flex justify-between items-center mb-4">
-                    <h3 className="text-xl font-bold text-textPrimary m-0">
-                      Audit Details: {activeStudentReport.studentName}
-                    </h3>
-                    <span className="text-xs text-textMuted">
-                      Messages: {activeStudentReport.messageCount}
-                    </span>
+                {activeStudentReport.error ? (
+                  <div className="bg-red-500/10 border border-red-500/30 text-critical rounded-xl px-6 py-6 mb-8 flex flex-col gap-4">
+                    <div className="flex items-center gap-3 text-lg font-bold text-red-400">
+                      <AlertTriangle size={24} />
+                      Failed to Audit {activeStudentReport.studentName}
+                    </div>
+                    <p className="text-sm text-textSecondary font-mono bg-black/40 p-4 rounded border border-white/5 whitespace-pre-wrap">
+                      {activeStudentReport.error}
+                    </p>
+                    <p className="text-xs text-textMuted">
+                      Please check that your Gemini API Key is entered correctly and has permission to query the model.
+                    </p>
                   </div>
-                  <p>{activeStudentReport.overallSummary}</p>
-                </div>
+                ) : (
+                  <>
+                    {/* Header Summary */}
+                    <div className="cross-student-banner bg-white/5 border border-white/5">
+                      <div className="flex justify-between items-center mb-4">
+                        <h3 className="text-xl font-bold text-textPrimary m-0">
+                          Audit Details: {activeStudentReport.studentName}
+                        </h3>
+                        <span className="text-xs text-textMuted">
+                          Messages: {activeStudentReport.messageCount}
+                        </span>
+                      </div>
+                      <p>{activeStudentReport.overallSummary}</p>
+                    </div>
 
                 {/* Score Grid */}
                 <div className="metrics-grid">
@@ -509,10 +529,10 @@ export default function Page() {
                   <div className="timeline-chat">
                     {activeStudentReport.messages?.map((msg) => {
                       const isFlagged = activeStudentReport.findings?.some(finding => 
-                        finding.messages?.some(fm => fm.id === msg.id)
+                        finding.messages?.some(fm => String(fm.id) === String(msg.id))
                       );
                       const relatedFinding = isFlagged ? activeStudentReport.findings.find(finding => 
-                        finding.messages?.some(fm => fm.id === msg.id)
+                        finding.messages?.some(fm => String(fm.id) === String(msg.id))
                       ) : null;
 
                       let bubbleClass = 'counselor';
@@ -550,6 +570,8 @@ export default function Page() {
                       );
                     })}
                   </div>
+                )}
+                  </>
                 )}
               </>
             )}
